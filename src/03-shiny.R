@@ -5,47 +5,54 @@ library(leaflet)
 library(leaflet.extras)
 
 # Lectura de datos ====
-data <- read_csv("data/raw/country_vaccinations.csv")
-
+data <- read_csv("data/interim/maps.csv")
+colnames <- data %>% select(percent_vaccinated, percent_fully_vaccinated, gdp:percent_deaths) %>%
+  colnames() 
 # Shiny ====
-col_names <- data %>% select(total_vaccinations:daily_vaccinations_per_million) %>% 
-  colnames()
+# Make a toy dataset
 
+x <- c(1,2,3,4,5)
+y <- c(52,49,19,15,31)
+grouping1 <- as.factor(c(1,1,1,2,2))
+grouping2 <- as.factor(c(1,2,3,4,5))
+toydataset <- data.frame(x,y,grouping1,grouping2)
 
+# Make palettes to apply to each grouping
+
+palette1 <- c("blue","red")
+palette2 <- c("orange","yellow","green","blue","purple")
+
+# the UI bit:
 ui <- fluidPage(
-  mainPanel( 
-    leafletOutput(outputId = "mymap"), 
-    absolutePanel(top = 60, left = 20, 
-                  selectInput("selectID", "Datos:", col_names)
-    )))
+  titlePanel("My question"),
+  sidebarLayout(
+    sidebarPanel(
+      selectInput(inputId = "selectedvariable",
+                  label = "Select a variable", 
+                  choices = colnames),
+    ),
+    textOutput("result")
+    # mainPanel(
+    #   plotOutput("myplot")
+    )
+  )
 
 
+# the server bit:
+server <- function(input, output) {
+  
+  output$result <- renderText({
+    paste("You chose", input$selectedvariable)
+  })
+  
+  currentvariable <- reactive({input$selectedvariable})
+  output$myplot <- renderPlot({
+    ggplot(data, aes(long, lat, group = group)) +
+      geom_polygon(aes(fill = input$selectedvariable), color = "white") +
+      geom_text(stat='count', aes(x = input$selectedvariable, label = ..count..), vjust = -1)
+      # scale_fill_viridis_c(option = "D")
+  })
+}
 
-mymap <- renderLeaflet({
-  leaflet(data) %>% 
-    setView(lng = -99, lat = 45, zoom = 2)  %>% #setting the view over ~ center of North America
-    addTiles() %>% 
-    addCircles(data = data, lat = ~ latitude, lng = ~ longitude, 
-               weight = 1, radius = ~sqrt(mag)*25000, 
-               popup = ~as.character(mag), 
-               label = ~as.character(paste0("Magnitude: ", sep = " ", mag)), 
-               color = ~pal(mag), fillOpacity = 0.5)
-})
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+# Run it 
+shinyApp(ui = ui, server = server)

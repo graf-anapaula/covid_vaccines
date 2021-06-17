@@ -1,4 +1,5 @@
 library(splitstackshape)
+library(tidyverse)
 
 df <- read_csv("data/raw/country_vaccinations.csv")
 
@@ -14,6 +15,13 @@ tipo_de_vacuna <- data %>% pivot_longer(vaccines_1:vaccines_5, names_to = "alt",
   mutate(vacuna = 1) %>% 
   pivot_wider(names_from = tipo_vacuna, values_from = vacuna) 
   
+
+vaccines <- left_join(df, tipo_de_vacuna, by = "country") %>% 
+  select(-vaccines)
+
+
+write_csv(vaccines, "data/interim/vacunas_por_tipo.csv")
+
 
 
 
